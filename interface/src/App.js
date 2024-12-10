@@ -54,6 +54,20 @@ function App() {
       .catch(error => console.error('Erreur:', error));
   };
 
+  //supprimer un item
+  const handleDeleteItem = (id) => {
+    fetch(`http://127.0.0.1:8081/delete/${id}`, {
+      method: 'DELETE',
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Erreur lors de la suppression de l\'élément.');
+        }
+        fetchTodos();
+      })
+      .catch(error => console.error('Erreur:', error));
+  };
+
   return (
     <div className='flex justify-center items-center h-[30rem]'>
       <div className='w-1/2 bg-grey-500 p-4 border shadow-md border-transparent rounded-md bg-white'>
@@ -95,6 +109,7 @@ function App() {
               </label>
               <button
                 className="text-red-500 hover:text-red-700"
+                onClick={() => handleDeleteItem(todo.id)}
               >
                 <DeleteForeverIcon />
               </button>
