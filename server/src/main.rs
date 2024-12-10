@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -146,6 +147,12 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                Cors::default()
+                    .allow_any_origin() // Autorise toutes les origines (à personnaliser)
+                    .allow_any_method() // Autorise toutes les méthodes HTTP
+                    .allow_any_header(), // Autorise tous les en-têtes
+            )
             .app_data(app_state.clone())
             .route("/todo-items", web::get().to(get_todo_item))
             .route("/item/{id}", web::get().to(get_item))
