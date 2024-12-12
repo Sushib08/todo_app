@@ -4,12 +4,19 @@ import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import EditIcon from '@mui/icons-material/Edit';
+import SaveIcon from '@mui/icons-material/Save';
+import CloseIcon from '@mui/icons-material/Close';
 
 function App() {
   const [todos, setTodos] = useState([]);
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [newTitle, setNewTitle] = useState('');
   const [newQuantity, setNewQuantity] = useState(1);
+  const [editingItem, setEditingItem] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [editingQuantity, setEditingQuantity] = useState(1);
+  const [errorMessage, setErrorMessage] = useState('');
+
 
   useEffect(() => {
     fetchTodos();
@@ -19,12 +26,12 @@ function App() {
     fetch('http://127.0.0.1:8081/todo-items')
       .then((response) => response.json())
       .then((data) => setTodos(data))
-      .catch((error) => console.error('Erreur:', error));
+      .catch((error) => setErrorMessage('Erreur:', error));
   };
 
   const handleAddItem = () => {
     if (!newTitle.trim()) {
-      alert('Le champ ne peut pas être vide.');
+      setErrorMessage('Le champ ne peut pas être vide.');
       return;
     }
 
@@ -49,9 +56,10 @@ function App() {
       .then(() => {
         setNewTitle('');
         setNewQuantity(1);
+        setErrorMessage('');
         fetchTodos();
       })
-      .catch((error) => console.error('Erreur:', error));
+      .catch((error) => setErrorMessage('Erreur:', error.message));
   };
 
   const handleDeleteItem = (id) => {
@@ -94,6 +102,42 @@ function App() {
       .catch((error) => console.error('Erreur:', error));
   };
 
+  const handleEditItem = (item) => {
+    setEditingItem(item.id);
+    setEditingTitle(item.title);
+    setEditingQuantity(item.quantity);
+    setErrorMessage('');
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingTitle.trim()) {
+      setErrorMessage('Le champ du titre ne peut pas être vide.');
+      return;
+    }
+
+    const updatedItem = {
+      title: editingTitle,
+      quantity: editingQuantity,
+    };
+
+    fetch(`http://127.0.0.1:8081/update/${editingItem}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedItem),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Erreur lors de la modification de l'élément.");
+        }
+        setEditingItem(null);
+        setErrorMessage('');
+        fetchTodos();
+      })
+      .catch((error) => console.error('Erreur:', error));
+  };
+
   return (
     <div className="flex justify-center items-center h-[30rem] mx-2">
       <div className="w-full sm:w-3/4 md:w-2/3 lg:w-1/2 p-4 border shadow-md border-transparent rounded-md bg-white">
@@ -125,29 +169,76 @@ function App() {
         <ul className="mx-4">
           {todos.map((todo) => (
             <li
-              className={`m-2 flex items-center border border-transparent bg-gray-200 rounded-md p-4 ${selectedItems.has(todo.id) ? 'line-through' : ''
-                }`}
               key={todo.id}
+              className={`m-2 flex items-center border bg-gray-200 rounded-md p-4 ${selectedItems.has(todo.id) && editingItem !== todo.id ? 'line-through' : ''
+                }`}
             >
-              <input
-                type="checkbox"
-                className="mr-2 mt-1"
-                checked={selectedItems.has(todo.id)}
-                onChange={() => handleSelectItem(todo.id)}
-              />
-              <label className="container flex items-center">
-                {todo.title} - x {todo.quantity}
-              </label>
-              <button className='text-blue-500 hover:text-blue-700'><EditIcon /></button>
-              <button
-                className="text-red-500 hover:text-red-700"
-                onClick={() => handleDeleteItem(todo.id)}
-              >
-                <DeleteForeverIcon />
-              </button>
+              {editingItem === todo.id ? (
+                <>
+                  <div className="flex flex-1">
+                    <input
+                      type="text"
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      className="mr-2 border bg-white shadow-md rounded-md p-2 w-64"
+                    />
+                    <input
+                      type="number"
+                      value={editingQuantity}
+                      onChange={(e) => setEditingQuantity(Number(e.target.value))}
+                      min="1"
+                      className="mr-2 border bg-white shadow-md rounded-md p-2 w-20"
+                    />
+                  </div>
+                  <div className="flex items-center ml-auto">
+                    <button
+                      className="text-blue-500 hover:text-blue-700"
+                      onClick={handleSaveEdit}
+                    >
+                      <SaveIcon />
+                    </button>
+                    <button
+                      className="text-red-500 hover:text-red-700 ml-2"
+                      onClick={() => setEditingItem(null)}
+                    >
+                      <CloseIcon />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="checkbox"
+                    className="mr-2"
+                    checked={selectedItems.has(todo.id)}
+                    onChange={() => handleSelectItem(todo.id)}
+                  />
+                  <label className="flex-1">
+                    {todo.title} - x {todo.quantity}
+                  </label>
+                  <button
+                    className="text-blue-500 hover:text-blue-700"
+                    onClick={() => handleEditItem(todo)}
+                  >
+                    <EditIcon />
+                  </button>
+                  <button
+                    className="text-red-500 hover:text-red-700 ml-2"
+                    onClick={() => handleDeleteItem(todo.id)}
+                  >
+                    <DeleteForeverIcon />
+                  </button>
+                </>
+              )}
+
             </li>
           ))}
         </ul>
+
+        {errorMessage && (
+          <div className="mt-4 text-red-500 text-center">{errorMessage}</div>
+        )}
+
 
         {selectedItems.size > 0 && (
           <div className="mt-4 text-center">
